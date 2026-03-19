@@ -1,1 +1,1960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEPA · Control de Inspecciones · Aeródromo SOARG</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --bg:#0a0f1a; --surface:#111827; --surface2:#1a2235; --surface3:#1e2d42;
+  --border:#1f3050; --border2:#2a4068;
+  --accent:#00c2ff; --accent2:#0080ff; --accent3:#00ffb3;
+  --warn:#ffb800; --danger:#ff4757; --success:#2ed573;
+  --text:#e8f0fe; --text2:#8facc8; --text3:#4a6580;
+  --font:'IBM Plex Sans',sans-serif; --mono:'IBM Plex Mono',monospace; --display:'Rajdhani',sans-serif;
+  --radius:8px; --shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:14px;}
 
+/* ─── LOGIN SCREEN ─── */
+#loginScreen {
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background-image: radial-gradient(ellipse at 20% 50%, rgba(0,128,255,0.06) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 20%, rgba(0,255,179,0.04) 0%, transparent 50%);
+}
+.login-card {
+  background:var(--surface);border:1px solid var(--border2);border-radius:16px;
+  padding:40px 44px;width:100%;max-width:420px;
+  box-shadow:0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,194,255,0.08);
+}
+.login-logo {
+  text-align:center;margin-bottom:32px;
+}
+.login-logo-icon {
+  width:64px;height:64px;background:linear-gradient(135deg,var(--accent2),var(--accent));
+  border-radius:14px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:32px;margin-bottom:12px;box-shadow:0 8px 24px rgba(0,130,255,0.3);
+}
+.login-title {font-family:var(--display);font-size:22px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;}
+.login-sub {font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:1px;text-transform:uppercase;}
+.login-form {display:flex;flex-direction:column;gap:16px;}
+.login-user-select {
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;max-width:320px;margin-left:auto;margin-right:auto;
+}
+.user-option {
+  border:1px solid var(--border2);border-radius:8px;padding:12px 10px;cursor:pointer;
+  text-align:center;transition:all 0.2s;background:var(--surface2);
+}
+.user-option:hover,.user-option.selected {border-color:var(--accent);background:rgba(0,194,255,0.08);}
+.user-option .uo-role {font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.user-option .uo-name {font-size:13px;font-weight:600;color:var(--text);}
+.user-option .uo-badge {font-size:10px;margin-top:3px;}
+.login-sep {text-align:center;color:var(--text3);font-size:11px;margin:4px 0;}
+.login-err {color:var(--danger);font-size:12px;text-align:center;display:none;}
+
+/* ─── ROLE BADGES ─── */
+.role-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.8px;
+  text-transform:uppercase;font-family:var(--mono);
+}
+.role-superadmin {background:rgba(255,184,0,0.15);color:var(--warn);border:1px solid rgba(255,184,0,0.35);}
+.role-admin {background:rgba(0,194,255,0.1);color:var(--accent);border:1px solid rgba(0,194,255,0.25);}
+.role-auditor {background:rgba(46,213,115,0.1);color:var(--success);border:1px solid rgba(46,213,115,0.25);}
+
+/* ─── HEADER ─── */
+.header {
+  background:linear-gradient(90deg,#0a0f1a 0%,#0d1a30 50%,#0a0f1a 100%);
+  border-bottom:1px solid var(--border2);padding:0 24px;
+  display:flex;align-items:center;gap:16px;height:64px;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,194,255,0.08);
+}
+.header-logo-icon {width:36px;height:36px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.header-title {font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:2px;color:var(--accent);text-transform:uppercase;white-space:nowrap;}
+.header-subtitle {font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;}
+.header-spacer{flex:1;}
+.header-user {display:flex;align-items:center;gap:10px;}
+.header-avatar {
+  width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent3));
+  display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+  font-family:var(--display);color:#fff;flex-shrink:0;
+}
+.header-user-name {font-size:13px;font-weight:600;color:var(--text);}
+.badge-live {background:rgba(0,255,179,0.12);border:1px solid var(--accent3);color:var(--accent3);font-size:10px;font-weight:600;letter-spacing:2px;padding:3px 8px;border-radius:4px;font-family:var(--mono);}
+.btn-logout {background:none;border:1px solid var(--border2);color:var(--text3);font-size:12px;padding:5px 10px;border-radius:5px;cursor:pointer;transition:all 0.15s;}
+.btn-logout:hover {border-color:var(--danger);color:var(--danger);}
+
+/* ─── APP BODY ─── */
+.app-body { display:block; }
+
+/* ─── NAV TABS (horizontal) ─── */
+.sidebar {
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  flex-direction:row;
+  padding:0 24px;
+  overflow-x:auto;
+}
+.sidebar-divider { display:none; }
+.tab-btn {
+  background:none;
+  border:none;
+  border-bottom:2px solid transparent;
+  color:var(--text2);
+  font-family:var(--font);
+  font-size:13px;
+  font-weight:500;
+  padding:14px 16px;
+  cursor:pointer;
+  transition:all 0.2s;
+  letter-spacing:0.5px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  white-space:nowrap;
+}
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-icon { font-size:14px; }
+.tab-label { }
+.tab-count {
+  background:var(--surface2);
+  border-radius:10px;
+  padding:1px 7px;
+  font-size:11px;
+  font-family:var(--mono);
+}
+.tab-btn.active .tab-count { background:rgba(0,194,255,0.15); color:var(--accent); }
+
+/* ─── MAIN ─── */
+.main{padding:24px;max-width:1600px;margin:0 auto;}
+
+/* ─── STATS ─── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.blue::before{background:var(--accent);}
+.stat-card.green::before{background:var(--success);}
+.stat-card.orange::before{background:var(--warn);}
+.stat-card.red::before{background:var(--danger);}
+.stat-card.cyan::before{background:var(--accent3);}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.stat-value{font-family:var(--display);font-size:32px;font-weight:700;line-height:1;}
+.stat-card.blue .stat-value{color:var(--accent);}
+.stat-card.green .stat-value{color:var(--success);}
+.stat-card.orange .stat-value{color:var(--warn);}
+.stat-card.red .stat-value{color:var(--danger);}
+.stat-card.cyan .stat-value{color:var(--accent3);}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+
+/* ─── BUTTONS ─── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--radius);border:1px solid transparent;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;}
+.btn-primary{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;box-shadow:0 2px 12px rgba(0,130,255,0.3);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 18px rgba(0,130,255,0.45);}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-outline{background:transparent;color:var(--text2);border-color:var(--border2);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,0.05);}
+.btn-danger-outline{background:transparent;color:var(--danger);border-color:rgba(255,71,87,0.4);}
+.btn-danger-outline:hover{background:rgba(255,71,87,0.1);}
+.btn-success{background:transparent;color:var(--success);border-color:rgba(46,213,115,0.4);}
+.btn-success:hover{background:rgba(46,213,115,0.1);}
+.btn-sm{padding:6px 11px;font-size:12px;}
+
+/* ─── TOOLBAR ─── */
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.search-box{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 14px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color 0.2s;}
+.search-box:focus{border-color:var(--accent);}
+.search-box::placeholder{color:var(--text3);}
+select.filter-select{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;cursor:pointer;}
+select.filter-select:focus{border-color:var(--accent);}
+
+/* ─── TABLE ─── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);border-bottom:1px solid var(--border2);}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{color:var(--accent);}
+tbody tr{border-bottom:1px solid var(--border);transition:background 0.15s;}
+tbody tr:hover{background:var(--surface2);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:11px 14px;vertical-align:middle;}
+
+/* ─── BADGES ─── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:0.5px;font-family:var(--mono);white-space:nowrap;}
+.badge-abierta{background:rgba(255,184,0,0.12);color:var(--warn);border:1px solid rgba(255,184,0,0.3);}
+.badge-cerrada{background:rgba(46,213,115,0.1);color:var(--success);border:1px solid rgba(46,213,115,0.25);}
+.badge-seguimiento{background:rgba(0,194,255,0.1);color:var(--accent);border:1px solid rgba(0,194,255,0.25);}
+.badge-vencida{background:rgba(255,71,87,0.12);color:var(--danger);border:1px solid rgba(255,71,87,0.3);}
+.cat-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;background:rgba(0,128,255,0.12);color:#5ab4ff;border:1px solid rgba(0,128,255,0.2);}
+.rac-link{font-family:var(--mono);font-size:11px;color:var(--accent3);background:rgba(0,255,179,0.07);border:1px solid rgba(0,255,179,0.2);padding:2px 8px;border-radius:4px;white-space:nowrap;cursor:pointer;transition:all 0.15s;}
+.rac-link:hover{background:rgba(0,255,179,0.15);}
+.correlativo{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:500;}
+.td-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+.priority-alta{background:var(--danger);}
+.priority-media{background:var(--warn);}
+.priority-baja{background:var(--success);}
+
+/* ─── MODAL ─── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(0,194,255,0.1);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);}
+.modal-title{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:1px;color:var(--accent);}
+.modal-close{background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer;line-height:1;transition:color 0.15s;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:24px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 24px;border-top:1px solid var(--border);}
+
+/* ─── FORM ─── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.form-full{grid-column:1 / -1;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;}
+.form-label .req{color:var(--danger);}
+.form-input,.form-select,.form-textarea{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color 0.2s;width:100%;}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
+.form-input[readonly]{color:var(--text3);cursor:default;}
+.form-textarea{min-height:90px;resize:vertical;}
+
+/* RAC Preview */
+.rac-preview{margin-top:6px;padding:10px 12px;background:rgba(0,255,179,0.06);border:1px solid rgba(0,255,179,0.2);border-radius:6px;font-size:11px;color:var(--accent3);font-family:var(--mono);display:none;line-height:1.5;}
+.rac-preview.show{display:block;}
+
+/* ─── PHOTO UPLOAD ─── */
+.photo-upload-zone {
+  border:2px dashed var(--border2);border-radius:8px;padding:20px;text-align:center;
+  cursor:pointer;transition:all 0.2s;background:var(--surface2);position:relative;
+}
+.photo-upload-zone:hover,.photo-upload-zone.drag-over{border-color:var(--accent);background:rgba(0,194,255,0.05);}
+.photo-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.photo-upload-icon{font-size:28px;margin-bottom:8px;opacity:0.6;}
+.photo-upload-text{font-size:12px;color:var(--text3);}
+.photo-upload-hint{font-size:11px;color:var(--text3);margin-top:3px;}
+.photo-previews{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.photo-thumb{position:relative;width:80px;height:80px;border-radius:6px;overflow:hidden;border:1px solid var(--border2);}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-thumb-del{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(255,71,87,0.9);border:none;border-radius:50%;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+
+/* ─── CHARTS ─── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.chart-title{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:1px;color:var(--text2);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.chart-filter{margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;}
+.period-btn{background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:12px;padding:5px 12px;cursor:pointer;transition:all 0.15s;}
+.period-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,194,255,0.1);}
+
+/* ─── DETAIL ─── */
+.detail-row{display:grid;grid-template-columns:150px 1fr;gap:0;border-bottom:1px solid var(--border);padding:12px 0;}
+.detail-row:last-child{border-bottom:none;}
+.detail-key{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:600;padding-top:1px;}
+.detail-val{color:var(--text);font-size:13px;}
+.detail-photos{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.detail-photo{width:100px;height:100px;border-radius:6px;overflow:hidden;border:1px solid var(--border2);cursor:pointer;transition:transform 0.15s;}
+.detail-photo:hover{transform:scale(1.03);}
+.detail-photo img{width:100%;height:100%;object-fit:cover;}
+.history-item{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:8px;font-size:12px;}
+.history-date{color:var(--text3);font-family:var(--mono);font-size:11px;margin-bottom:4px;}
+
+/* ─── RAC SUB-TABS ─── */
+.rac-sub-btn {
+  background:none; border:none; border-bottom:2px solid transparent;
+  color:var(--text2); font-family:var(--font); font-size:13px; font-weight:500;
+  padding:11px 18px; cursor:pointer; transition:all 0.2s;
+}
+.rac-sub-btn:hover { color:var(--text); }
+.rac-sub-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* ─── FREQUENCY SCHEDULE ─── */
+.freq-group { margin-bottom:16px; border-radius:8px; overflow:hidden; border:1px solid var(--border); }
+.freq-group-header {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 16px; font-family:var(--display); font-size:14px;
+  font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+}
+.freq-semanal  { background:rgba(0,194,255,0.1);  color:var(--accent); }
+.freq-quincenal{ background:rgba(255,184,0,0.1);  color:var(--warn); }
+.freq-mensual  { background:rgba(0,255,179,0.1);  color:var(--accent3); }
+.freq-cuatro   { background:rgba(160,110,255,0.1);color:#a06eff; }
+.freq-aplique  { background:rgba(255,71,87,0.1);  color:var(--danger); }
+.freq-icon     { font-size:16px; }
+.freq-count    { margin-left:auto; font-size:11px; font-family:var(--mono); opacity:0.7; font-weight:400; letter-spacing:0; }
+.freq-items    { background:var(--surface); }
+.freq-item {
+  display:flex; align-items:center; gap:14px;
+  padding:11px 16px; border-bottom:1px solid var(--border);
+  transition:background 0.15s;
+}
+.freq-item:last-child { border-bottom:none; }
+.freq-item:hover { background:var(--surface2); }
+.freq-item-num {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--surface2); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-family:var(--mono); color:var(--text3);
+  flex-shrink:0;
+}
+.freq-item-info { flex:1; min-width:0; }
+.freq-item-name { font-size:13px; font-weight:500; color:var(--text); margin-bottom:2px; }
+.freq-item-rac  { font-size:11px; color:var(--accent3); font-family:var(--mono); }
+.freq-badge {
+  flex-shrink:0; padding:3px 10px; border-radius:4px;
+  font-size:10px; font-weight:700; letter-spacing:0.5px;
+  font-family:var(--mono); text-transform:uppercase;
+}
+.freq-badge-semanal  { background:rgba(0,194,255,0.12);  color:var(--accent);  border:1px solid rgba(0,194,255,0.25); }
+.freq-badge-quincenal{ background:rgba(255,184,0,0.12);  color:var(--warn);    border:1px solid rgba(255,184,0,0.25); }
+.freq-badge-mensual  { background:rgba(0,255,179,0.12);  color:var(--accent3); border:1px solid rgba(0,255,179,0.25); }
+.freq-badge-cuatro   { background:rgba(160,110,255,0.12);color:#a06eff;        border:1px solid rgba(160,110,255,0.25); }
+.freq-badge-aplique  { background:rgba(255,71,87,0.12);  color:var(--danger);  border:1px solid rgba(255,71,87,0.25); }
+.rac-item{padding:10px 14px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;cursor:pointer;transition:all 0.15s;display:flex;align-items:flex-start;gap:12px;}
+.rac-item:hover{border-color:var(--accent3);background:rgba(0,255,179,0.05);}
+.rac-num{font-family:var(--mono);font-size:12px;color:var(--accent3);white-space:nowrap;font-weight:600;min-width:120px;}
+.rac-desc{font-size:13px;color:var(--text2);}
+
+/* ─── SECTION HEADER ─── */
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.section-title{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:1px;color:var(--text);}
+.section-line{flex:1;height:1px;background:var(--border);}
+
+/* ─── TABLE SECTION ─── */
+.table-section{display:none;}
+.table-section.active{display:block;}
+
+/* ─── EMPTY STATE ─── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3);}
+.empty-icon{font-size:48px;margin-bottom:12px;opacity:0.5;}
+.empty-text{font-size:15px;margin-bottom:6px;color:var(--text2);}
+
+/* ─── USERS ADMIN ─── */
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:10px;}
+.user-avatar-lg{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;font-family:var(--display);color:#fff;flex-shrink:0;}
+.ua-superadmin{background:linear-gradient(135deg,#ffb800,#ff7f00);}
+.ua-admin{background:linear-gradient(135deg,var(--accent2),var(--accent));}
+.ua-auditor{background:linear-gradient(135deg,var(--success),#00b894);}
+.user-info{flex:1;}
+.user-name{font-size:15px;font-weight:600;color:var(--text);}
+.user-email{font-size:12px;color:var(--text3);margin-top:2px;}
+.user-perms{font-size:11px;color:var(--text3);margin-top:6px;}
+
+/* ─── LIGHTBOX ─── */
+#lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9998;align-items:center;justify-content:center;cursor:pointer;}
+#lightbox.open{display:flex;}
+#lightbox img{max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 0 60px rgba(0,0,0,0.8);}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--accent);border-radius:8px;padding:12px 18px;color:var(--text);font-size:13px;z-index:9999;box-shadow:var(--shadow);display:none;animation:slideIn 0.3s ease;}
+@keyframes slideIn{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.badge-sin-novedad{background:rgba(0,255,179,0.1);color:var(--accent3);border:1px solid rgba(0,255,179,0.3);}
+/* ─── MISC ─── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.overflow-el{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
+.readonly-note{font-size:11px;color:var(--text3);margin-top:4px;font-style:italic;}
+@media(max-width:900px){
+  .stats-row{grid-template-columns:repeat(3,1fr);}
+  .charts-grid{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">✈</div>
+      <div class="login-title">SOARG · Inspecciones</div>
+      <div class="login-sub">Aeropuerto Internacional El Salvador</div>
+    </div>
+    <div class="login-form">
+      <div class="form-group">
+        <label class="form-label">Selecciona tu usuario</label>
+        <div class="login-user-select" id="userOptions"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input type="password" class="form-input" id="loginPass" placeholder="Ingresa tu contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-err" id="loginErr">Contraseña incorrecta. Intenta de nuevo.</div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()">Iniciar Sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="appShell" style="display:none;">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo-icon">✈</div>
+  <div>
+    <div class="header-title">SOARG · Control de Inspecciones</div>
+    <div class="header-subtitle">Aeropuerto Internacional El Salvador — Oficial de Aeródromo</div>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-user">
+    <div class="header-avatar" id="hdrAvatar"></div>
+    <div>
+      <div class="header-user-name" id="hdrName"></div>
+      <div id="hdrRole"></div>
+    </div>
+    <div class="badge-live" id="connStatus">⏳ CONECTANDO</div>
+    <button class="btn-logout" onclick="doLogout()">Salir</button>
+  </div>
+</header>
+
+<!-- NAV SIDEBAR + MAIN WRAPPER -->
+<div class="app-body">
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="navTabs">
+  <button class="tab-btn active" onclick="switchTab('dashboard')">
+    <span class="tab-icon">⬛</span><span class="tab-label">Dashboard</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('abiertas')">
+    <span class="tab-icon">🟡</span><span class="tab-label">Abiertas</span><span class="tab-count" id="cnt-abiertas">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('seguimiento')">
+    <span class="tab-icon">🔵</span><span class="tab-label">Seguimiento</span><span class="tab-count" id="cnt-seguimiento">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('sin_novedad')">
+    <span class="tab-icon">🟩</span><span class="tab-label">Sin Novedad</span><span class="tab-count" id="cnt-sin_novedad">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('cerradas')">
+    <span class="tab-icon">🟢</span><span class="tab-label">Cerradas</span><span class="tab-count" id="cnt-cerradas">0</span>
+  </button>
+  <div class="sidebar-divider"></div>
+  <button class="tab-btn" onclick="switchTab('todas')">
+    <span class="tab-icon">📋</span><span class="tab-label">Todas</span><span class="tab-count" id="cnt-todas">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('graficas')">
+    <span class="tab-icon">📊</span><span class="tab-label">Gráficas</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('rac')">
+    <span class="tab-icon">📖</span><span class="tab-label">RAC 139</span>
+  </button>
+  <button class="tab-btn" id="tabUsuarios" style="display:none;" onclick="switchTab('usuarios')">
+    <span class="tab-icon">👤</span><span class="tab-label">Usuarios</span>
+  </button>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card blue"><div class="stat-label">Total</div><div class="stat-value" id="stat-total">0</div><div class="stat-sub">registros</div></div>
+    <div class="stat-card orange"><div class="stat-label">Abiertas</div><div class="stat-value" id="stat-abiertas">0</div><div class="stat-sub">pendientes</div></div>
+    <div class="stat-card blue"><div class="stat-label">Seguimiento</div><div class="stat-value" id="stat-seguimiento">0</div><div class="stat-sub">en proceso</div></div>
+    <div class="stat-card cyan"><div class="stat-label">Sin Novedad</div><div class="stat-value" id="stat-sin_novedad">0</div><div class="stat-sub">sin hallazgos</div></div>
+    <div class="stat-card green"><div class="stat-label">Cerradas</div><div class="stat-value" id="stat-cerradas">0</div><div class="stat-sub">completadas</div></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="table-section active">
+    <div class="section-header">
+      <div class="section-title">Dashboard Operacional</div>
+      <div class="section-line"></div>
+      <button class="btn btn-primary" id="btnNewDash" onclick="openNewModal()">＋ Nueva Inspección</button>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">📊 Estado</div><canvas id="chartDonut" height="200"></canvas></div>
+      <div class="chart-card"><div class="chart-title">📈 Por Tipo (Top 10)</div><canvas id="chartBar" height="200"></canvas></div>
+    </div>
+    <div class="chart-card" style="margin-bottom:20px;"><div class="chart-title">📅 Actividad — Últimos 14 días</div><canvas id="chartLine" height="90"></canvas></div>
+    <div class="section-header"><div class="section-title" style="font-size:15px;">Últimas 10 Inspecciones</div><div class="section-line"></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Estado</th><th>RAC</th></tr></thead><tbody id="tbody-recent"></tbody></table></div>
+  </div>
+
+  <!-- ABIERTAS -->
+  <div id="tab-abiertas" class="table-section">
+    <div class="section-header"><div class="section-title">Abiertas</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewAb" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Prioridad</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-abiertas"></tbody></table></div>
+  </div>
+
+  <!-- SEGUIMIENTO -->
+  <div id="tab-seguimiento" class="table-section">
+    <div class="section-header"><div class="section-title">En Seguimiento</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewSeg" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Observaciones</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-seguimiento"></tbody></table></div>
+  </div>
+
+  <!-- CERRADAS -->
+  <div id="tab-cerradas" class="table-section">
+    <div class="section-header"><div class="section-title">Cerradas</div><div class="section-line"></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo</th><th>Categoría</th><th>Inspector</th><th>Apertura</th><th>Cierre</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-cerradas"></tbody></table></div>
+  </div>
+
+  <!-- TODAS -->
+  <div id="tab-todas" class="table-section">
+    <div class="section-header"><div class="section-title">Todas las Inspecciones</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewTodas" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="toolbar">
+      <input type="text" class="search-box" id="searchAll" placeholder="🔍 Buscar correlativo, tipo, inspector..." oninput="renderAll()">
+      <select class="filter-select" id="filterCat" onchange="renderAll()"><option value="">Todas las categorías</option></select>
+      <select class="filter-select" id="filterEst" onchange="renderAll()"><option value="">Todos los estados</option><option value="ABIERTA">Abierta</option><option value="SEGUIMIENTO">Seguimiento</option><option value="SIN_NOVEDAD">Sin Novedad</option><option value="CERRADA">Cerrada</option></select>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Estado</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-todas"></tbody></table></div>
+  </div>
+
+  <!-- GRAFICAS -->
+  <div id="tab-graficas" class="table-section">
+    <div class="section-header"><div class="section-title">Análisis y Gráficas</div><div class="section-line"></div></div>
+    <div class="chart-filter">
+      <span style="color:var(--text3);font-size:12px;margin-right:6px;align-self:center;">PERÍODO:</span>
+      <button class="period-btn active" onclick="setPeriod('semanal',this)">Semanal</button>
+      <button class="period-btn" onclick="setPeriod('mensual',this)">Mensual</button>
+      <button class="period-btn" onclick="setPeriod('semestral',this)">Semestral</button>
+      <button class="period-btn" onclick="setPeriod('anual',this)">Anual</button>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">📊 Por Tipo (período)</div><canvas id="chartTipoBar" height="260"></canvas></div>
+      <div class="chart-card"><div class="chart-title">🥧 Por Categoría</div><canvas id="chartCatPie" height="260"></canvas></div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card"><div class="chart-title">📈 Tendencia</div><canvas id="chartTrend" height="200"></canvas></div>
+      <div class="chart-card"><div class="chart-title">✅ Estados</div><canvas id="chartEstado" height="200"></canvas></div>
+    </div>
+  </div>
+
+  <!-- RAC 139 -->
+  <div id="tab-rac" class="table-section">
+    <div class="section-header">
+      <div class="section-title">RAC 139 — Normativa y Programa de Vigilancia</div>
+      <div class="section-line"></div>
+    </div>
+
+    <!-- SUB-TABS -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;">
+      <button class="rac-sub-btn active" id="racSubFreq" onclick="racSubTab('freq')">📅 Programa de Inspecciones 2026</button>
+      <button class="rac-sub-btn" id="racSubArt" onclick="racSubTab('art')">📖 Artículos RAC 139</button>
+    </div>
+
+    <!-- FRECUENCIAS -->
+    <div id="racPanelFreq">
+      <div style="margin-bottom:20px;background:rgba(0,194,255,0.06);border:1px solid rgba(0,194,255,0.2);border-radius:8px;padding:14px 18px;">
+        <div style="font-size:12px;color:var(--accent);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">✈ Aeropuerto Internacional El Salvador — SOARG</div>
+        <div style="font-size:12px;color:var(--text3);">Programa de Vigilancia de Seguridad Operacional · Oficial de Aeródromo · Año 2026 · Aprobado por Gerencia Aeroportuaria</div>
+      </div>
+
+      <!-- Semanal -->
+      <div class="freq-group">
+        <div class="freq-group-header freq-semanal">
+          <span class="freq-icon">🔁</span>
+          <span>SEMANAL</span>
+          <span class="freq-count">1 inspección</span>
+        </div>
+        <div class="freq-items">
+          <div class="freq-item">
+            <div class="freq-item-num">1</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Pavimentos</div>
+              <div class="freq-item-rac">RAC 139.320 — Área Pavimentada</div>
+            </div>
+            <span class="freq-badge freq-badge-semanal">Semanal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quincenal -->
+      <div class="freq-group">
+        <div class="freq-group-header freq-quincenal">
+          <span class="freq-icon">📆</span>
+          <span>QUINCENAL</span>
+          <span class="freq-count">5 inspecciones</span>
+        </div>
+        <div class="freq-items">
+          <div class="freq-item">
+            <div class="freq-item-num">2</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Drenajes</div>
+              <div class="freq-item-rac">RAC 139.330 — Franjas de Pista y Calles de Rodaje</div>
+            </div>
+            <span class="freq-badge freq-badge-quincenal">Quincenal</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">3</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Franjas</div>
+              <div class="freq-item-rac">RAC 139.330 — Franjas de Pista y Calles de Rodaje</div>
+            </div>
+            <span class="freq-badge freq-badge-quincenal">Quincenal</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">4</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Luces</div>
+              <div class="freq-item-rac">RAC 139.335 — Ayudas Visuales y Sistemas Eléctricos</div>
+            </div>
+            <span class="freq-badge freq-badge-quincenal">Quincenal</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">5</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Letreros</div>
+              <div class="freq-item-rac">RAC 139.335 — Ayudas Visuales y Sistemas Eléctricos</div>
+            </div>
+            <span class="freq-badge freq-badge-quincenal">Quincenal</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">6</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Vallas y Caminos</div>
+              <div class="freq-item-rac">RAC 139.330 / RAC 139.350 lit. K — Protección Pública / Vías de Acceso para Emergencias</div>
+            </div>
+            <span class="freq-badge freq-badge-quincenal">Quincenal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mensual -->
+      <div class="freq-group">
+        <div class="freq-group-header freq-mensual">
+          <span class="freq-icon">📅</span>
+          <span>MENSUAL</span>
+          <span class="freq-count">5 inspecciones</span>
+        </div>
+        <div class="freq-items">
+          <div class="freq-item">
+            <div class="freq-item-num">7</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Señales</div>
+              <div class="freq-item-rac">RAC 139.335 — Ayudas Visuales y Sistemas Eléctricos</div>
+            </div>
+            <span class="freq-badge freq-badge-mensual">Mensual</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">8</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Luces Nocturna</div>
+              <div class="freq-item-rac">RAC 139.335 — Ayudas Visuales y Sistemas Eléctricos</div>
+            </div>
+            <span class="freq-badge freq-badge-mensual">Mensual</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">9</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Radio Ayudas</div>
+              <div class="freq-item-rac">RAC 139.385 — Protección a las Radio Ayudas para la Navegación</div>
+            </div>
+            <span class="freq-badge freq-badge-mensual">Mensual</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">10</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Construcciones en Área de Movimiento</div>
+              <div class="freq-item-rac">RAC 139.405 — Identificación y Señalización de Áreas en Construcción</div>
+            </div>
+            <span class="freq-badge freq-badge-mensual">Mensual</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">11</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección SOAM</div>
+              <div class="freq-item-rac">RAC 139.375 / RAC 139.410 / RAC 139.415 — Vehículos / Dirección en Plataforma / Aeronaves en Tierra</div>
+            </div>
+            <span class="freq-badge freq-badge-mensual">Mensual</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cada 4 meses -->
+      <div class="freq-group">
+        <div class="freq-group-header freq-cuatro">
+          <span class="freq-icon">🗓</span>
+          <span>CADA 4 MESES</span>
+          <span class="freq-count">7 inspecciones</span>
+        </div>
+        <div class="freq-items">
+          <div class="freq-item">
+            <div class="freq-item-num">12</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Seguridad Operacional en Área de Movimiento</div>
+              <div class="freq-item-rac">RAC 139.370 — Auditorías e Inspecciones de Seguridad Operacional</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">13</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Materiales Peligrosos</div>
+              <div class="freq-item-rac">RAC 139.355 — Manipulación y Almacenamiento de Materiales Peligrosos</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">14</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Fuente Secundaria de Energía Eléctrica</div>
+              <div class="freq-item-rac">RAC 139.335 lit. F,G,H,I,J — Fuente Secundaria de Energía (Tabla 2)</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">15</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Obstáculos — Superficies Limitadoras (OLS)</div>
+              <div class="freq-item-rac">RAC 139.380 — Control de Obstáculos</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">16</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Control de Fauna</div>
+              <div class="freq-item-rac">RAC 139.395 — Reducción de Peligros debidos a las Aves y Otros Animales</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">17</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección SEI / Salvamento</div>
+              <div class="freq-item-rac">RAC 139.340 / RAC 139.345 / RAC 139.350 — SEI: Categoría, Equipo y Requerimientos Operacionales</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">—</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección de Combustibles / Instalaciones de Proveedores</div>
+              <div class="freq-item-rac">RAC 139.355 / NFPA 407 — Manipulación y Almacenamiento / Aircraft Fuel Servicing</div>
+            </div>
+            <span class="freq-badge freq-badge-cuatro">Cada 4 meses</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cuando aplique -->
+      <div class="freq-group">
+        <div class="freq-group-header freq-aplique">
+          <span class="freq-icon">⚡</span>
+          <span>CUANDO APLIQUE</span>
+          <span class="freq-count">3 inspecciones</span>
+        </div>
+        <div class="freq-items">
+          <div class="freq-item">
+            <div class="freq-item-num">18</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección Especial</div>
+              <div class="freq-item-rac">RAC 139.320 — Área Pavimentada (aplicación especial según caso)</div>
+            </div>
+            <span class="freq-badge freq-badge-aplique">Cuando aplique</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">19</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Inspección FOD</div>
+              <div class="freq-item-rac">RAC 139.320 lit. A) num. 3 — Área Pavimentada / Objetos Extraños</div>
+            </div>
+            <span class="freq-badge freq-badge-aplique">Cuando aplique</span>
+          </div>
+          <div class="freq-item">
+            <div class="freq-item-num">20</div>
+            <div class="freq-item-info">
+              <div class="freq-item-name">Toma de Tiempos con SEI</div>
+              <div class="freq-item-rac">RAC 139.340 / RAC 139.350 — SEI: Categoría y Requerimientos Operacionales</div>
+            </div>
+            <span class="freq-badge freq-badge-aplique">Cuando aplique</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen -->
+      <div style="margin-top:8px;display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+        <div style="background:rgba(0,194,255,0.07);border:1px solid rgba(0,194,255,0.2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--accent);">1</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Semanal</div>
+        </div>
+        <div style="background:rgba(255,184,0,0.07);border:1px solid rgba(255,184,0,0.2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--warn);">5</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Quincenal</div>
+        </div>
+        <div style="background:rgba(0,255,179,0.07);border:1px solid rgba(0,255,179,0.2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--accent3);">5</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Mensual</div>
+        </div>
+        <div style="background:rgba(160,110,255,0.07);border:1px solid rgba(160,110,255,0.2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-family:var(--display);font-size:28px;font-weight:700;color:#a06eff;">7</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Cada 4 meses</div>
+        </div>
+        <div style="background:rgba(255,71,87,0.07);border:1px solid rgba(255,71,87,0.2);border-radius:8px;padding:14px;text-align:center;">
+          <div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--danger);">3</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Cuando aplique</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARTÍCULOS RAC -->
+    <div id="racPanelArt" style="display:none;">
+      <div style="margin-bottom:16px;">
+        <input type="text" class="search-box" id="searchRac" placeholder="🔍 Buscar en RAC 139..." oninput="renderRacList()" style="max-width:420px;">
+      </div>
+      <div id="rac-list"></div>
+    </div>
+  </div>
+
+  <!-- SIN NOVEDAD -->
+  <div id="tab-sin_novedad" class="table-section">
+    <div class="section-header"><div class="section-title">Sin Novedad</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewSN" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Observaciones</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-sin_novedad"></tbody></table></div>
+  </div>
+
+  <!-- USUARIOS (solo superadmin) -->
+  <div id="tab-usuarios" class="table-section">
+    <div class="section-header"><div class="section-title">Gestión de Usuarios</div><div class="section-line"></div></div>
+    <div id="userCards"></div>
+    <div style="margin-top:20px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;">Cambiar Contraseña de Usuario</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;">
+        <div class="form-group"><label class="form-label">Usuario</label><select class="form-select" id="chgUser"><option value="">-- Seleccionar --</option></select></div>
+        <div class="form-group"><label class="form-label">Nueva Contraseña</label><input type="password" class="form-input" id="chgPass" placeholder="Nueva contraseña"></div>
+        <button class="btn btn-primary" onclick="changePassword()">Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div><!-- /app-body -->
+</div><!-- /appShell -->
+
+<!-- ═══ MODAL NUEVA / EDITAR INSPECCIÓN ═══ -->
+<div class="modal-overlay" id="modalNew">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">NUEVA INSPECCIÓN</div>
+      <button class="modal-close" onclick="closeModal('modalNew')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="form-label">Correlativo</label>
+          <input type="text" class="form-input" id="fCorrelativo" readonly>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tipo de Inspección <span class="req">*</span></label>
+          <select class="form-select" id="fTipo" onchange="onTipoChange()">
+            <option value="">-- Seleccionar --</option>
+          </select>
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">RAC Aplicable</label>
+          <input type="text" class="form-input" id="fRac" readonly>
+          <div class="rac-preview" id="racPreview"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Categoría <span class="req">*</span></label>
+          <select class="form-select" id="fCategoria">
+            <option value="">-- Seleccionar --</option>
+            <option value="Infraestructura">Infraestructura</option>
+            <option value="Señalización y Ayudas Visuales">Señalización y Ayudas Visuales</option>
+            <option value="Seguridad Operacional">Seguridad Operacional</option>
+            <option value="SEI / Rescate">SEI / Rescate</option>
+            <option value="Medioambiente">Medioambiente</option>
+            <option value="Construcciones">Construcciones</option>
+            <option value="Especial">Especial</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Inspector Responsable <span class="req">*</span></label>
+          <input type="text" class="form-input" id="fInspector" placeholder="Nombre del inspector">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fecha de Inspección <span class="req">*</span></label>
+          <input type="date" class="form-input" id="fFecha">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Prioridad</label>
+          <select class="form-select" id="fPrioridad">
+            <option value="BAJA">Baja</option>
+            <option value="MEDIA" selected>Media</option>
+            <option value="ALTA">Alta</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="fEstado" onchange="onEstadoChange()">
+            <option value="ABIERTA">Abierta</option>
+            <option value="SEGUIMIENTO">Seguimiento</option>
+            <option value="SIN_NOVEDAD">Sin Novedad</option>
+            <option value="CERRADA">Cerrada</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Frecuencia</label>
+          <select class="form-select" id="fFrecuencia">
+            <option value="Semanal">Semanal</option>
+            <option value="Quincenal">Quincenal</option>
+            <option value="Mensual">Mensual</option>
+            <option value="Cada 4 meses">Cada 4 meses</option>
+            <option value="Cuando aplique">Cuando aplique</option>
+          </select>
+        </div>
+
+        <div class="form-group form-full" id="fechaCierreGroup" style="display:none;">
+          <label class="form-label">Fecha de Cierre</label>
+          <input type="date" class="form-input" id="fFechaCierre">
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">Hallazgos / Observaciones <span class="req">*</span></label>
+          <textarea class="form-textarea" id="fObservaciones" placeholder="Describir hallazgos encontrados durante la inspección..."></textarea>
+        </div>
+
+        <!-- FOTO UPLOAD -->
+        <div class="form-group form-full" id="photoSection">
+          <label class="form-label">Fotografías de Apertura</label>
+          <div class="photo-upload-zone" id="dropZone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="photoInput" accept="image/*" multiple onchange="onPhotoSelect(event)">
+            <div class="photo-upload-icon">📷</div>
+            <div class="photo-upload-text">Arrastra fotos aquí o haz clic para seleccionar</div>
+            <div class="photo-upload-hint">JPG, PNG, WEBP · Máx. 5 fotos · 5MB c/u</div>
+          </div>
+          <div class="photo-previews" id="photoPreviews"></div>
+          <div class="readonly-note" id="photoReadonlyNote" style="display:none;">Solo lectura — Sin permiso para subir fotos en este rol.</div>
+        </div>
+
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalNew')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveInspection()" id="btnSave">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modalDetail">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-header">
+      <div class="modal-title" id="detailTitle">DETALLE</div>
+      <button class="modal-close" onclick="closeModal('modalDetail')">×</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-footer" id="detailFooter"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL CIERRE DE INSPECCIÓN ═══ -->
+<div class="modal-overlay" id="modalCierre">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--success);">✓ CERRAR INSPECCIÓN</div>
+      <button class="modal-close" onclick="closeModal('modalCierre')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(46,213,115,0.07);border:1px solid rgba(46,213,115,0.25);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:18px;">🔒</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--success);" id="cierreCorrelativo"></div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;" id="cierreTipo"></div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label class="form-label">Fecha de Cierre <span class="req">*</span></label>
+          <input type="date" class="form-input" id="cFechaCierre">
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Observaciones de Cierre <span class="req">*</span></label>
+          <textarea class="form-textarea" id="cObservaciones" placeholder="Describe cómo se resolvió o se da por concluida la inspección..." style="min-height:80px;"></textarea>
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Fotografías de Cierre</label>
+          <div class="photo-upload-zone" id="dropZoneCierre" ondragover="onDragOver2(event)" ondragleave="onDragLeave2(event)" ondrop="onDrop2(event)">
+            <input type="file" id="photoInputCierre" accept="image/*" multiple onchange="onPhotoSelectCierre(event)">
+            <div class="photo-upload-icon">📷</div>
+            <div class="photo-upload-text">Arrastra fotos de cierre o haz clic para seleccionar</div>
+            <div class="photo-upload-hint">JPG, PNG, WEBP · Máx. 5 fotos · 5MB c/u</div>
+          </div>
+          <div class="photo-previews" id="photoPreviewsCierre"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalCierre')">Cancelar</button>
+      <button class="btn btn-primary" style="background:linear-gradient(135deg,#00b894,#2ed573);box-shadow:0 2px 12px rgba(46,213,115,0.3);" onclick="confirmarCierre()">✓ Confirmar Cierre</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src=""></div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  USERS & AUTH
+// ═══════════════════════════════════════════════════════
+const DEFAULT_USERS = [
+  {
+    id:'jordan',
+    name:'Jordan Aristides Herrera',
+    shortName:'Jordan H.',
+    initials:'JH',
+    role:'superadmin',
+    roleLabel:'Super Administrador',
+    email:'jordan.herrera@cepa.gob.sv',
+    password:'Jordan2026#',
+    avatarClass:'ua-superadmin',
+    perms:'Acceso total: crear, editar, eliminar, ver usuarios, cambiar contraseñas, subir fotos.'
+  },
+  {
+    id:'auditor',
+    name:'Auditor de Inspecciones',
+    shortName:'Auditor',
+    initials:'AU',
+    role:'auditor',
+    roleLabel:'Auditoría',
+    email:'auditoria@cepa.gob.sv',
+    password:'Audit2026#',
+    avatarClass:'ua-auditor',
+    perms:'Solo lectura: puede ver todas las inspecciones, detalles y gráficas. No puede crear, editar ni eliminar.'
+  }
+];
+
+function getUsers() {
+  const stored = localStorage.getItem('aerodrome_users');
+  if (!stored) { localStorage.setItem('aerodrome_users', JSON.stringify(DEFAULT_USERS)); return DEFAULT_USERS; }
+  const parsed = JSON.parse(stored);
+  // If stored list still has the removed 'admin' (Edward) entry, reset to defaults
+  if (parsed.find(u => u.id === 'admin')) {
+    localStorage.setItem('aerodrome_users', JSON.stringify(DEFAULT_USERS));
+    return DEFAULT_USERS;
+  }
+  return parsed;
+}
+function saveUsers(u) { localStorage.setItem('aerodrome_users', JSON.stringify(u)); }
+
+let currentUser = null;
+let selectedUserId = null;
+
+function initLogin() {
+  const opts = document.getElementById('userOptions');
+  getUsers().forEach(u => {
+    const d = document.createElement('div');
+    d.className = 'user-option';
+    d.dataset.id = u.id;
+    d.innerHTML = `<div class="uo-role">${u.roleLabel}</div><div class="uo-name">${u.shortName}</div><div class="uo-badge"><span class="role-badge role-${u.role}">${u.role}</span></div>`;
+    d.onclick = () => { document.querySelectorAll('.user-option').forEach(x=>x.classList.remove('selected')); d.classList.add('selected'); selectedUserId = u.id; };
+    opts.appendChild(d);
+  });
+  // populate chgUser
+  const sel = document.getElementById('chgUser');
+  getUsers().forEach(u => { const o=document.createElement('option'); o.value=u.id; o.textContent=u.name; sel.appendChild(o); });
+}
+
+function doLogin() {
+  if (!selectedUserId) { showLoginErr('Selecciona un usuario.'); return; }
+  const pass = document.getElementById('loginPass').value;
+  const users = getUsers();
+  const user = users.find(u => u.id === selectedUserId);
+  if (!user || user.password !== pass) { showLoginErr('Contraseña incorrecta. Intenta de nuevo.'); return; }
+  currentUser = user;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  setupForRole();
+  init();
+}
+
+function showLoginErr(msg) {
+  const e = document.getElementById('loginErr');
+  e.textContent = msg; e.style.display = 'block';
+  setTimeout(() => e.style.display='none', 3000);
+}
+
+function doLogout() {
+  currentUser = null; selectedUserId = null;
+  document.getElementById('loginPass').value = '';
+  document.querySelectorAll('.user-option').forEach(x=>x.classList.remove('selected'));
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function setupForRole() {
+  const r = currentUser.role;
+  // Header
+  document.getElementById('hdrAvatar').textContent = currentUser.initials;
+  document.getElementById('hdrName').textContent = currentUser.shortName;
+  document.getElementById('hdrRole').innerHTML = `<span class="role-badge role-${r}">${currentUser.roleLabel}</span>`;
+  // Tabs
+  document.getElementById('tabUsuarios').style.display = r==='superadmin' ? 'flex' : 'none';
+  // New buttons
+  const canCreate = r==='superadmin'||r==='admin';
+  ['btnNewDash','btnNewAb','btnNewSeg','btnNewSN','btnNewTodas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canCreate ? 'inline-flex' : 'none';
+  });
+  // Render users tab
+  renderUsersTab();
+}
+
+function can(action) {
+  if (!currentUser) return false;
+  const r = currentUser.role;
+  if (r==='superadmin') return true;
+  if (action==='create'||action==='edit'||action==='close'||action==='photo') return r==='admin';
+  if (action==='delete'||action==='manageUsers') return false;
+  return false;
+}
+
+function changePassword() {
+  if (currentUser.role !== 'superadmin') return;
+  const uid = document.getElementById('chgUser').value;
+  const pass = document.getElementById('chgPass').value.trim();
+  if (!uid||!pass) { showToast('⚠ Selecciona usuario e ingresa contraseña'); return; }
+  if (pass.length < 6) { showToast('⚠ Mínimo 6 caracteres'); return; }
+  const users = getUsers();
+  const u = users.find(x=>x.id===uid);
+  if (u) { u.password=pass; saveUsers(users); showToast('✅ Contraseña actualizada para '+u.shortName); document.getElementById('chgPass').value=''; }
+}
+
+function renderUsersTab() {
+  const cont = document.getElementById('userCards');
+  if (!cont) return;
+  cont.innerHTML = getUsers().map(u => `
+    <div class="user-card">
+      <div class="user-avatar-lg ${u.avatarClass}">${u.initials}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name}</div>
+        <div class="user-email">${u.email}</div>
+        <div style="margin-top:6px;"><span class="role-badge role-${u.role}">${u.roleLabel}</span></div>
+        <div class="user-perms">${u.perms}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  RAC DATA (actualizado con RAC_139_ACT.docx)
+// ═══════════════════════════════════════════════════════
+const RAC_LIST = [
+  { code:'RAC 139.305', desc:'GENERALIDADES' },
+  { code:'RAC 139.310', desc:'REGISTROS' },
+  { code:'RAC 139.315', desc:'COMPETENCIA Y REQUERIMIENTOS DE PERSONAL' },
+  { code:'RAC 139.320', desc:'ÁREA PAVIMENTADA' },
+  { code:'RAC 139.325', desc:'ÁREAS NO PAVIMENTADAS' },
+  { code:'RAC 139.330', desc:'FRANJAS DE PISTA Y CALLES DE RODAJE' },
+  { code:'RAC 139.335', desc:'AYUDAS VISUALES Y SISTEMAS ELÉCTRICOS' },
+  { code:'RAC 139.340', desc:'SALVAMENTO Y EXTINCIÓN DE INCENDIOS (SEI): DETERMINACIÓN DE CATEGORÍA' },
+  { code:'RAC 139.345', desc:'SALVAMENTO Y EXTINCIÓN DE INCENDIOS (SEI): EQUIPO Y AGENTES' },
+  { code:'RAC 139.350', desc:'SALVAMENTO Y EXTINCIÓN DE INCENDIOS (SEI): REQUERIMIENTOS OPERACIONALES' },
+  { code:'RAC 139.355', desc:'MANIPULACIÓN Y ALMACENAMIENTO DE MERCANCÍAS PELIGROSAS' },
+  { code:'RAC 139.360', desc:'SISTEMA DE GESTIÓN DE LA SEGURIDAD OPERACIONAL (SMS)' },
+  { code:'RAC 139.365', desc:'PLAN DE EMERGENCIAS DEL AERÓDROMO' },
+  { code:'RAC 139.370', desc:'AUDITORÍAS E INSPECCIONES DE SEGURIDAD OPERACIONAL' },
+  { code:'RAC 139.375', desc:'VEHÍCULOS Y SERVICIOS EN PLATAFORMA' },
+  { code:'RAC 139.380', desc:'CONTROL DE OBSTÁCULOS' },
+  { code:'RAC 139.385', desc:'PROTECCIÓN A LAS RADIO AYUDAS PARA LA NAVEGACIÓN' },
+  { code:'RAC 139.390', desc:'PROTECCIÓN PÚBLICA' },
+  { code:'RAC 139.395', desc:'REDUCCIÓN DE PELIGROS DEBIDOS A LAS AVES Y OTROS ANIMALES' },
+  { code:'RAC 139.400', desc:'NOTIFICACIÓN E INFORMES DE CONDICIÓN DEL AERÓDROMO' },
+  { code:'RAC 139.405', desc:'IDENTIFICACIÓN Y SEÑALIZACIÓN DE ÁREAS EN CONSTRUCCIÓN' },
+  { code:'RAC 139.410', desc:'SERVICIO DE DIRECCIÓN EN LA PLATAFORMA' },
+  { code:'RAC 139.415', desc:'SERVICIO DE LAS AERONAVES EN TIERRA' },
+  { code:'RAC 139.420', desc:'TRASLADO Y MOVIMIENTO DE AERONAVES INUTILIZADAS' },
+  { code:'RAC 139.425', desc:'HERRAMIENTAS Y EQUIPO DE PRECISIÓN' },
+  { code:'RAC 139.430', desc:'LITERATURA TÉCNICA' },
+  { code:'RAC 139.435', desc:'NOTIFICACIÓN E INVESTIGACIÓN DE INCIDENTES/ACCIDENTES' },
+  { code:'RAC 139.440', desc:'AVISOS DE ADVERTENCIA' },
+  { code:'RAC 139.445', desc:'SEGUROS' },
+];
+
+// Mapeo exacto del RAC_139_ACT.docx
+const TIPO_RAC = {
+  'Inspección de Pavimentos': {
+    rac:'RAC 139.320', racDesc:'Área Pavimentada',
+    cat:'Infraestructura', freq:'Semanal'
+  },
+  'Inspección de Drenajes': {
+    rac:'RAC 139.330', racDesc:'Franjas de Pista y Calles de Rodaje',
+    cat:'Infraestructura', freq:'Quincenal'
+  },
+  'Inspección de Franjas': {
+    rac:'RAC 139.330', racDesc:'Franjas de Pista y Calles de Rodaje',
+    cat:'Infraestructura', freq:'Quincenal'
+  },
+  'Inspección de Luces': {
+    rac:'RAC 139.335', racDesc:'Ayudas Visuales y Sistemas Eléctricos',
+    cat:'Señalización y Ayudas Visuales', freq:'Quincenal'
+  },
+  'Inspección de Letreros': {
+    rac:'RAC 139.335', racDesc:'Ayudas Visuales y Sistemas Eléctricos',
+    cat:'Señalización y Ayudas Visuales', freq:'Quincenal'
+  },
+  'Inspección de Vallas y Caminos': {
+    rac:'RAC 139.330 / RAC 139.350 lit. K', racDesc:'Protección Pública / Vías de Acceso para Emergencias',
+    cat:'Infraestructura', freq:'Quincenal'
+  },
+  'Inspección de Señales': {
+    rac:'RAC 139.335', racDesc:'Ayudas Visuales y Sistemas Eléctricos',
+    cat:'Señalización y Ayudas Visuales', freq:'Mensual'
+  },
+  'Inspección de Luces Nocturna': {
+    rac:'RAC 139.335', racDesc:'Ayudas Visuales y Sistemas Eléctricos',
+    cat:'Señalización y Ayudas Visuales', freq:'Mensual'
+  },
+  'Inspección de Radio Ayudas': {
+    rac:'RAC 139.385', racDesc:'Protección a las Radio Ayudas para la Navegación',
+    cat:'Señalización y Ayudas Visuales', freq:'Mensual'
+  },
+  'Inspección de Construcciones': {
+    rac:'RAC 139.405', racDesc:'Identificación y Señalización de Áreas en Construcción',
+    cat:'Construcciones', freq:'Mensual'
+  },
+  'Inspección de Combustibles': {
+    rac:'RAC 139.355 / NFPA 407', racDesc:'Manipulación y Almacenamiento de Mercancías Peligrosas / NFPA 407 Aircraft Fuel Servicing',
+    cat:'Seguridad Operacional', freq:'Cada 4 meses'
+  },
+  'Inspección SOAM': {
+    rac:'RAC 139.375 / RAC 139.410 / RAC 139.415', racDesc:'Vehículos / Dirección en Plataforma / Servicio de Aeronaves en Tierra',
+    cat:'Seguridad Operacional', freq:'Mensual'
+  },
+  'Inspección de Materiales Peligrosos': {
+    rac:'RAC 139.355', racDesc:'Manipulación y Almacenamiento de Materiales Peligrosos',
+    cat:'Seguridad Operacional', freq:'Cada 4 meses'
+  },
+  'Inspección de Fuente Secundaria': {
+    rac:'RAC 139.335 lit. F,G,H,I,J', racDesc:'Ayudas Visuales y Sistemas Eléctricos — Fuente Secundaria de Energía (Tabla 2)',
+    cat:'Infraestructura', freq:'Cada 4 meses'
+  },
+  'Inspección de Obstáculos (OLS)': {
+    rac:'RAC 139.380', racDesc:'Control de Obstáculos',
+    cat:'Seguridad Operacional', freq:'Cada 4 meses'
+  },
+  'Inspección de Fauna': {
+    rac:'RAC 139.395', racDesc:'Reducción de Peligros debidos a las Aves y Otros Animales',
+    cat:'Medioambiente', freq:'Cada 4 meses'
+  },
+  'Inspección SEI / Salvamento': {
+    rac:'RAC 139.340 / RAC 139.345 / RAC 139.350', racDesc:'Salvamento y Extinción de Incendios — Categoría, Equipo y Requerimientos Operacionales',
+    cat:'SEI / Rescate', freq:'Cada 4 meses'
+  },
+  'Inspección Especial': {
+    rac:'RAC 139.320', racDesc:'Área Pavimentada (aplicación especial según caso)',
+    cat:'Especial', freq:'Cuando aplique'
+  },
+  'Inspección FOD': {
+    rac:'RAC 139.320 lit. A) num. 3', racDesc:'Área Pavimentada — Literal A, Numeral 3 (Objetos Extraños)',
+    cat:'Seguridad Operacional', freq:'Cuando aplique'
+  },
+};
+
+// ═══════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyDVLtSuOHgYOY4R-jU5eYE_uhR2ZAVxw84",
+  authDomain: "siad-72ef0.firebaseapp.com",
+  projectId: "siad-72ef0",
+  storageBucket: "siad-72ef0.firebasestorage.app",
+  messagingSenderId: "537867972210",
+  appId: "1:537867972210:web:e45107881176558ebfdceb"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const COL = 'inspecciones';
+
+let inspecciones = [];
+let editingId = null;
+let pendingPhotos = [];
+let charts = {};
+let currentPeriod = 'semanal';
+let sortField = 'fecha', sortAsc = false;
+
+// ── Guardar / eliminar en Firestore ──
+async function save() {
+  // No-op: writes go directly via saveDoc / deleteDoc
+}
+
+async function saveDoc(data) {
+  // Strip undefined values (Firestore rejects them)
+  const clean = JSON.parse(JSON.stringify(data));
+  await db.collection(COL).doc(clean.id).set(clean);
+}
+
+async function deleteDoc(id) {
+  await db.collection(COL).doc(id).delete();
+}
+
+// ── Escuchar cambios en tiempo real ──
+function startListener() {
+  db.collection(COL).onSnapshot(snap => {
+    inspecciones = snap.docs.map(d => d.data());
+    renderAll();
+    const s = document.getElementById('connStatus');
+    if(s){ s.textContent='● EN LÍNEA'; s.style.borderColor='var(--accent3)'; s.style.color='var(--accent3)'; }
+  }, err => {
+    console.error('Firestore error:', err);
+    const s = document.getElementById('connStatus');
+    if(s){ s.textContent='⚠ SIN CONEXIÓN'; s.style.borderColor='var(--danger)'; s.style.color='var(--danger)'; }
+    showToast('⚠ Error de conexión con la base de datos');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+function init() {
+  populateTipoSelect();
+  populateFilterCat();
+  loadSampleData();
+  renderRacList();
+  initDashCharts();
+  startListener(); // loads data from Firestore and re-renders on every change
+}
+
+function populateTipoSelect() {
+  const sel = document.getElementById('fTipo');
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+  Object.keys(TIPO_RAC).forEach(t => {
+    const o = document.createElement('option'); o.value=t; o.textContent=t; sel.appendChild(o);
+  });
+}
+
+function populateFilterCat() {
+  const sel = document.getElementById('filterCat');
+  const cats = [...new Set(Object.values(TIPO_RAC).map(v=>v.cat))].sort();
+  cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+}
+
+// ═══════════════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.table-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById('tab-'+tab);
+  if(el) el.classList.add('active');
+  // Match sidebar button by onclick attribute
+  document.querySelectorAll('.tab-btn').forEach(b=>{
+    if(b.getAttribute('onclick')===`switchTab('${tab}')`) b.classList.add('active');
+  });
+  renderAll();
+  if(tab==='graficas') renderCharts();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function renderAll() {
+  const all = getSorted();
+  const ab = all.filter(i=>i.estado==='ABIERTA');
+  const seg = all.filter(i=>i.estado==='SEGUIMIENTO');
+  const sn = all.filter(i=>i.estado==='SIN_NOVEDAD');
+  const cer = all.filter(i=>i.estado==='CERRADA');
+
+  document.getElementById('cnt-abiertas').textContent = ab.length;
+  document.getElementById('cnt-seguimiento').textContent = seg.length;
+  document.getElementById('cnt-sin_novedad').textContent = sn.length;
+  document.getElementById('cnt-cerradas').textContent = cer.length;
+  document.getElementById('cnt-todas').textContent = all.length;
+
+  renderTable('tbody-abiertas', ab, 'abierta');
+  renderTable('tbody-seguimiento', seg, 'seguimiento');
+  renderTable('tbody-sin_novedad', sn, 'sin_novedad');
+  renderTable('tbody-cerradas', cer, 'cerrada');
+
+  let filtered = all;
+  const q=(document.getElementById('searchAll')?.value||'').toLowerCase();
+  const cat=document.getElementById('filterCat')?.value||'';
+  const est=document.getElementById('filterEst')?.value||'';
+  if(q) filtered=filtered.filter(i=>i.tipo.toLowerCase().includes(q)||i.correlativo.toLowerCase().includes(q)||(i.inspector||'').toLowerCase().includes(q));
+  if(cat) filtered=filtered.filter(i=>i.categoria===cat);
+  if(est) filtered=filtered.filter(i=>i.estado===est);
+  renderTable('tbody-todas', filtered, 'todas');
+
+  const recent=[...inspecciones].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,10);
+  renderTableSimple('tbody-recent', recent);
+  updateStats();
+  updateDashCharts();
+}
+
+function photoIcon(insp) {
+  const nA=(insp.fotos||[]).length;
+  const nC=(insp.fotosCierre||[]).length;
+  if(!nA&&!nC) return '<span style="color:var(--text3);font-size:11px;">—</span>';
+  const parts=[];
+  if(nA) parts.push(`🔓${nA}`);
+  if(nC) parts.push(`🔒${nC}`);
+  return `<span style="font-size:11px;color:var(--accent3);cursor:pointer;font-family:var(--mono);" onclick="viewDetail('${insp.id}')">${parts.join(' ')}</span>`;
+}
+
+function renderTable(tbodyId, items, mode) {
+  const tbody=document.getElementById(tbodyId);
+  if(!tbody) return;
+  if(!items.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Sin inspecciones registradas</div></div></td></tr>`;return;}
+  tbody.innerHTML = items.map(i=>{
+    const canEdit = can('edit');
+    const canDel = can('delete');
+    const canClose = can('close')&&i.estado!=='CERRADA';
+    return `<tr>
+      <td><span class="correlativo">${i.correlativo}</span></td>
+      <td><span class="overflow-el" title="${i.tipo}">${i.tipo}</span></td>
+      <td><span class="cat-badge">${i.categoria||'—'}</span></td>
+      <td>${i.inspector||'—'}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${formatDate(i.fecha)}</td>
+      ${mode==='seguimiento'?`<td style="max-width:150px;font-size:12px;color:var(--text2);">${(i.observaciones||'').substring(0,55)}…</td>`:''}
+      ${mode==='cerrada'?`<td style="font-family:var(--mono);font-size:12px;">${i.fechaCierre?formatDate(i.fechaCierre):'—'}</td>`:''}
+      ${mode==='abierta'?`<td><span class="priority-dot priority-${(i.prioridad||'MEDIA').toLowerCase()}"></span>${i.prioridad||'MEDIA'}</td>`:''}
+      ${mode==='todas'?`<td>${estadoBadge(i.estado)}</td>`:''}
+      <td><span class="rac-link" onclick="showRacModal('${(i.rac||'').replace(/'/g,"\\'")}','${i.id}')">${i.rac||'—'}</span></td>
+      <td>${photoIcon(i)}</td>
+      <td>
+        <div class="td-actions">
+          <button class="btn btn-outline btn-sm" onclick="viewDetail('${i.id}')">👁</button>
+          ${canEdit?`<button class="btn btn-outline btn-sm" onclick="editInspection('${i.id}')">✏️</button>`:''}
+          ${canClose?`<button class="btn btn-success btn-sm" onclick="cerrarInspection('${i.id}')">✓ Cerrar</button>`:''}
+          ${canDel?`<button class="btn btn-danger-outline btn-sm" onclick="deleteInspection('${i.id}')">🗑</button>`:''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTableSimple(tbodyId, items) {
+  const tbody=document.getElementById(tbodyId);
+  if(!tbody) return;
+  tbody.innerHTML=items.map(i=>`<tr>
+    <td><span class="correlativo">${i.correlativo}</span></td>
+    <td>${i.tipo}</td>
+    <td><span class="cat-badge">${i.categoria||'—'}</span></td>
+    <td>${i.inspector||'—'}</td>
+    <td style="font-family:var(--mono);font-size:12px;">${formatDate(i.fecha)}</td>
+    <td>${estadoBadge(i.estado)}</td>
+    <td><span class="rac-link" onclick="showRacModal('${(i.rac||'').replace(/'/g,"\\'")}','${i.id}')">${i.rac||'—'}</span></td>
+  </tr>`).join('');
+}
+
+function estadoBadge(e){
+  const m={'ABIERTA':'badge-abierta','CERRADA':'badge-cerrada','SEGUIMIENTO':'badge-seguimiento','SIN_NOVEDAD':'badge-sin-novedad'};
+  const ic={'ABIERTA':'◎','CERRADA':'✓','SEGUIMIENTO':'↻','SIN_NOVEDAD':'✦'};
+  const label={'ABIERTA':'ABIERTA','CERRADA':'CERRADA','SEGUIMIENTO':'SEGUIMIENTO','SIN_NOVEDAD':'SIN NOVEDAD'};
+  return `<span class="badge ${m[e]||'badge-abierta'}">${ic[e]||'◎'} ${label[e]||e}</span>`;
+}
+function formatDate(d){if(!d)return'—';const p=d.split('-');return`${p[2]}/${p[1]}/${p[0]}`;}
+function getSorted(){return[...inspecciones].sort((a,b)=>{let av=a[sortField]||'',bv=b[sortField]||'';if(sortField==='fecha'){av=new Date(av);bv=new Date(bv);}return sortAsc?(av>bv?1:-1):(av<bv?1:-1);});}
+function updateStats(){
+  document.getElementById('stat-total').textContent=inspecciones.length;
+  document.getElementById('stat-abiertas').textContent=inspecciones.filter(i=>i.estado==='ABIERTA').length;
+  document.getElementById('stat-seguimiento').textContent=inspecciones.filter(i=>i.estado==='SEGUIMIENTO').length;
+  document.getElementById('stat-cerradas').textContent=inspecciones.filter(i=>i.estado==='CERRADA').length;
+  const snEl=document.getElementById('stat-sin_novedad');
+  if(snEl) snEl.textContent=inspecciones.filter(i=>i.estado==='SIN_NOVEDAD').length;
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODAL FORM
+// ═══════════════════════════════════════════════════════
+function openNewModal() {
+  if(!can('create')){showToast('⚠ Sin permiso para crear inspecciones.');return;}
+  editingId=null; pendingPhotos=[];
+  document.getElementById('modalTitle').textContent='NUEVA INSPECCIÓN';
+  document.getElementById('btnSave').textContent='💾 Guardar';
+  document.getElementById('fCorrelativo').value=generateCorrelativo();
+  document.getElementById('fTipo').value='';
+  document.getElementById('fRac').value='';
+  document.getElementById('racPreview').className='rac-preview';
+  document.getElementById('fCategoria').value='';
+  document.getElementById('fInspector').value=currentUser.shortName;
+  document.getElementById('fFecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('fPrioridad').value='MEDIA';
+  document.getElementById('fEstado').value='ABIERTA';
+  document.getElementById('fFrecuencia').value='Mensual';
+  document.getElementById('fObservaciones').value='';
+  document.getElementById('fFechaCierre').value='';
+  document.getElementById('fechaCierreGroup').style.display='none';
+  renderPhotoPreviews();
+  setupPhotoSection();
+  document.getElementById('modalNew').classList.add('open');
+}
+
+function editInspection(id) {
+  if(!can('edit')){showToast('⚠ Sin permiso para editar.');return;}
+  editingId=id;
+  const i=inspecciones.find(x=>x.id===id);
+  if(!i) return;
+  pendingPhotos=[...(i.fotos||[])];
+  document.getElementById('modalTitle').textContent='EDITAR INSPECCIÓN';
+  document.getElementById('btnSave').textContent='💾 Actualizar';
+  document.getElementById('fCorrelativo').value=i.correlativo;
+  document.getElementById('fTipo').value=i.tipo;
+  document.getElementById('fRac').value=i.rac||'';
+  const info=TIPO_RAC[i.tipo];
+  if(info){document.getElementById('racPreview').textContent=`${i.rac} — ${info.racDesc}`;document.getElementById('racPreview').classList.add('show');}
+  document.getElementById('fCategoria').value=i.categoria||'';
+  document.getElementById('fInspector').value=i.inspector||'';
+  document.getElementById('fFecha').value=i.fecha||'';
+  document.getElementById('fPrioridad').value=i.prioridad||'MEDIA';
+  document.getElementById('fEstado').value=i.estado||'ABIERTA';
+  document.getElementById('fFrecuencia').value=i.frecuencia||'Mensual';
+  document.getElementById('fObservaciones').value=i.observaciones||'';
+  document.getElementById('fFechaCierre').value=i.fechaCierre||'';
+  document.getElementById('fechaCierreGroup').style.display=i.estado==='CERRADA'?'block':'none';
+  renderPhotoPreviews();
+  setupPhotoSection();
+  document.getElementById('modalNew').classList.add('open');
+}
+
+function onEstadoChange() {
+  document.getElementById('fechaCierreGroup').style.display=document.getElementById('fEstado').value==='CERRADA'?'block':'none';
+}
+
+function onTipoChange() {
+  const tipo=document.getElementById('fTipo').value;
+  const info=TIPO_RAC[tipo];
+  if(info){
+    document.getElementById('fRac').value=info.rac;
+    document.getElementById('fCategoria').value=info.cat;
+    document.getElementById('fFrecuencia').value=info.freq;
+    document.getElementById('racPreview').textContent=`${info.rac} — ${info.racDesc}`;
+    document.getElementById('racPreview').classList.add('show');
+  } else {
+    document.getElementById('fRac').value='';
+    document.getElementById('racPreview').classList.remove('show');
+  }
+}
+
+async function saveInspection() {
+  const tipo=document.getElementById('fTipo').value;
+  const inspector=document.getElementById('fInspector').value.trim();
+  const fecha=document.getElementById('fFecha').value;
+  const obs=document.getElementById('fObservaciones').value.trim();
+  if(!tipo||!inspector||!fecha||!obs){showToast('⚠ Completa los campos obligatorios');return;}
+  const estado=document.getElementById('fEstado').value;
+  const btnSave=document.getElementById('btnSave');
+  btnSave.disabled=true; btnSave.textContent='⏳ Guardando...';
+  const old=inspecciones.find(x=>x.id===editingId);
+  const data={
+    id:editingId||('id_'+Date.now()),
+    correlativo:document.getElementById('fCorrelativo').value,
+    tipo,inspector,fecha,observaciones:obs,
+    rac:document.getElementById('fRac').value,
+    categoria:document.getElementById('fCategoria').value,
+    prioridad:document.getElementById('fPrioridad').value,
+    estado,
+    frecuencia:document.getElementById('fFrecuencia').value,
+    fechaCierre:estado==='CERRADA'?document.getElementById('fFechaCierre').value:'',
+    fotos:[...pendingPhotos],
+    fotosCierre:old?.fotosCierre||[],
+    obsCierre:old?.obsCierre||'',
+    createdBy:currentUser.id,
+    createdAt:old?.createdAt||new Date().toISOString(),
+    updatedAt:new Date().toISOString(),
+    historia:editingId
+      ?[...(old?.historia||[]),{fecha:new Date().toISOString(),nota:`Actualizado por ${currentUser.shortName}`,estado}]
+      :[{fecha:new Date().toISOString(),nota:`Creado por ${currentUser.shortName}`,estado}],
+  };
+  try {
+    await saveDoc(data);
+    showToast(editingId?'✅ Inspección actualizada':'✅ Registrada: '+data.correlativo);
+    closeModal('modalNew');
+  } catch(e) {
+    showToast('❌ Error al guardar: '+e.message);
+  } finally {
+    btnSave.disabled=false;
+    btnSave.textContent=editingId?'💾 Actualizar':'💾 Guardar';
+  }
+}
+
+// ID de la inspección que está siendo cerrada via modal
+let closingId = null;
+let pendingPhotosCierre = [];
+
+function cerrarInspection(id) {
+  if(!can('close')){showToast('⚠ Sin permiso.');return;}
+  const i=inspecciones.find(x=>x.id===id);
+  if(!i) return;
+  closingId = id;
+  pendingPhotosCierre = [];
+  document.getElementById('cierreCorrelativo').textContent = i.correlativo;
+  document.getElementById('cierreTipo').textContent = i.tipo;
+  document.getElementById('cFechaCierre').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cObservaciones').value = '';
+  renderPhotoPreviewsCierre();
+  closeModal('modalDetail');
+  document.getElementById('modalCierre').classList.add('open');
+}
+
+async function confirmarCierre() {
+  const fecha = document.getElementById('cFechaCierre').value;
+  const obs = document.getElementById('cObservaciones').value.trim();
+  if(!fecha){showToast('⚠ Selecciona la fecha de cierre');return;}
+  if(!obs){showToast('⚠ Agrega las observaciones de cierre');return;}
+  const i = inspecciones.find(x=>x.id===closingId);
+  if(!i) return;
+  const updated = {
+    ...i,
+    estado:'CERRADA',
+    fechaCierre:fecha,
+    obsCierre:obs,
+    fotosCierre:[...pendingPhotosCierre],
+    updatedAt:new Date().toISOString(),
+    historia:[...(i.historia||[]),{fecha:new Date().toISOString(),nota:`Cerrado por ${currentUser.shortName}. ${obs}`,estado:'CERRADA'}],
+  };
+  try {
+    await saveDoc(updated);
+    closeModal('modalCierre');
+    showToast('✅ Inspección cerrada correctamente');
+  } catch(e) {
+    showToast('❌ Error al cerrar: '+e.message);
+  }
+}
+
+// Photo handlers for CIERRE modal
+function onPhotoSelectCierre(e){processFilesCierre(Array.from(e.target.files));e.target.value='';}
+function onDragOver2(e){e.preventDefault();document.getElementById('dropZoneCierre').classList.add('drag-over');}
+function onDragLeave2(){document.getElementById('dropZoneCierre').classList.remove('drag-over');}
+function onDrop2(e){e.preventDefault();document.getElementById('dropZoneCierre').classList.remove('drag-over');processFilesCierre(Array.from(e.dataTransfer.files));}
+
+function processFilesCierre(files) {
+  if(pendingPhotosCierre.length>=5){showToast('⚠ Máximo 5 fotos');return;}
+  files.filter(f=>f.type.startsWith('image/')).slice(0,5-pendingPhotosCierre.length).forEach(file=>{
+    if(file.size>5*1024*1024){showToast('⚠ '+file.name+' supera 5MB');return;}
+    const r=new FileReader();
+    r.onload=ev=>{pendingPhotosCierre.push({name:file.name,dataUrl:ev.target.result});renderPhotoPreviewsCierre();};
+    r.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreviewsCierre(){
+  const c=document.getElementById('photoPreviewsCierre');
+  if(!c) return;
+  c.innerHTML=pendingPhotosCierre.map((p,idx)=>`
+    <div class="photo-thumb">
+      <img src="${p.dataUrl}" alt="${p.name}" onclick="openLightbox('${encodeURIComponent(p.dataUrl)}')">
+      <button class="photo-thumb-del" onclick="removePCierre(${idx})">×</button>
+    </div>
+  `).join('');
+}
+function removePCierre(idx){pendingPhotosCierre.splice(idx,1);renderPhotoPreviewsCierre();}
+
+async function deleteInspection(id) {
+  if(!can('delete')){showToast('⚠ Sin permiso para eliminar.');return;}
+  if(!confirm('¿Eliminar esta inspección permanentemente?')) return;
+  try {
+    await deleteDoc(id);
+    showToast('🗑 Eliminada');
+  } catch(e) {
+    showToast('❌ Error al eliminar: '+e.message);
+  }
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function generateCorrelativo(){
+  const y=new Date().getFullYear(),pre=`INS-${y}-`;
+  const nums=inspecciones.filter(i=>i.correlativo.startsWith(pre)).map(i=>parseInt(i.correlativo.replace(pre,''))||0);
+  return pre+String(nums.length?Math.max(...nums)+1:1).padStart(3,'0');
+}
+
+// ═══════════════════════════════════════════════════════
+//  PHOTO HANDLING
+// ═══════════════════════════════════════════════════════
+function setupPhotoSection() {
+  const canPhoto=can('photo');
+  document.getElementById('dropZone').style.display=canPhoto?'block':'none';
+  document.getElementById('photoReadonlyNote').style.display=canPhoto?'none':'block';
+}
+
+function onPhotoSelect(e) {
+  processFiles(Array.from(e.target.files));
+  e.target.value='';
+}
+function onDragOver(e){e.preventDefault();document.getElementById('dropZone').classList.add('drag-over');}
+function onDragLeave(){document.getElementById('dropZone').classList.remove('drag-over');}
+function onDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('drag-over');processFiles(Array.from(e.dataTransfer.files));}
+
+function processFiles(files) {
+  if(pendingPhotos.length>=5){showToast('⚠ Máximo 5 fotos por inspección');return;}
+  const allowed=files.filter(f=>f.type.startsWith('image/'));
+  if(!allowed.length) return;
+  allowed.slice(0,5-pendingPhotos.length).forEach(file => {
+    if(file.size>5*1024*1024){showToast('⚠ '+file.name+' supera 5MB');return;}
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      pendingPhotos.push({name:file.name,dataUrl:ev.target.result});
+      renderPhotoPreviews();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoPreviews() {
+  const cont=document.getElementById('photoPreviews');
+  if(!cont) return;
+  cont.innerHTML=pendingPhotos.map((p,idx)=>`
+    <div class="photo-thumb">
+      <img src="${p.dataUrl}" alt="${p.name}" onclick="openLightbox('${encodeURIComponent(p.dataUrl)}')">
+      ${can('photo')?`<button class="photo-thumb-del" onclick="removePhoto(${idx})">×</button>`:''}
+    </div>
+  `).join('');
+}
+
+function removePhoto(idx){pendingPhotos.splice(idx,1);renderPhotoPreviews();}
+function openLightbox(src){document.getElementById('lightboxImg').src=decodeURIComponent(src);document.getElementById('lightbox').classList.add('open');}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');document.getElementById('lightboxImg').src='';}
+
+// ═══════════════════════════════════════════════════════
+//  DETAIL VIEW
+// ═══════════════════════════════════════════════════════
+function viewDetail(id) {
+  const i=inspecciones.find(x=>x.id===id);
+  if(!i) return;
+  const info=TIPO_RAC[i.tipo];
+  document.getElementById('detailTitle').textContent=`INSPECCIÓN — ${i.correlativo}`;
+
+  const fotosAperturaHtml=(i.fotos&&i.fotos.length)
+    ?`<div class="detail-photos">${i.fotos.map(f=>`<div class="detail-photo"><img src="${f.dataUrl}" alt="${f.name}" onclick="openLightbox('${encodeURIComponent(f.dataUrl)}')"></div>`).join('')}</div>`
+    :'<span style="color:var(--text3);font-size:12px;">Sin fotografías de apertura</span>';
+
+  const fotosCierreHtml=(i.fotosCierre&&i.fotosCierre.length)
+    ?`<div class="detail-photos">${i.fotosCierre.map(f=>`<div class="detail-photo"><img src="${f.dataUrl}" alt="${f.name}" onclick="openLightbox('${encodeURIComponent(f.dataUrl)}')"></div>`).join('')}</div>`
+    :'<span style="color:var(--text3);font-size:12px;">Sin fotografías de cierre</span>';
+
+  document.getElementById('detailBody').innerHTML=`
+    <div class="detail-row"><div class="detail-key">Correlativo</div><div class="detail-val"><span class="correlativo">${i.correlativo}</span></div></div>
+    <div class="detail-row"><div class="detail-key">Tipo</div><div class="detail-val">${i.tipo}</div></div>
+    <div class="detail-row"><div class="detail-key">RAC Aplicable</div><div class="detail-val"><span class="rac-link" style="cursor:default;">${i.rac||'—'}</span>${info?` — <span style="color:var(--text2);font-size:12px;">${info.racDesc}</span>`:''}</div></div>
+    <div class="detail-row"><div class="detail-key">Categoría</div><div class="detail-val"><span class="cat-badge">${i.categoria||'—'}</span></div></div>
+    <div class="detail-row"><div class="detail-key">Inspector</div><div class="detail-val">${i.inspector||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Fecha Apertura</div><div class="detail-val">${formatDate(i.fecha)}</div></div>
+    <div class="detail-row"><div class="detail-key">Estado</div><div class="detail-val">${estadoBadge(i.estado)}</div></div>
+    <div class="detail-row"><div class="detail-key">Prioridad</div><div class="detail-val"><span class="priority-dot priority-${(i.prioridad||'MEDIA').toLowerCase()}"></span>${i.prioridad||'MEDIA'}</div></div>
+    <div class="detail-row"><div class="detail-key">Frecuencia</div><div class="detail-val">${i.frecuencia||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Hallazgos</div><div class="detail-val" style="white-space:pre-wrap;">${i.observaciones||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Fotos Apertura</div><div class="detail-val">${fotosAperturaHtml}</div></div>
+    ${i.estado==='CERRADA'?`
+    <div style="margin:16px 0 8px;padding:8px 12px;background:rgba(46,213,115,0.07);border-left:3px solid var(--success);border-radius:4px;font-size:11px;font-weight:700;color:var(--success);letter-spacing:1px;text-transform:uppercase;">✓ Datos de Cierre</div>
+    <div class="detail-row"><div class="detail-key">Fecha Cierre</div><div class="detail-val" style="color:var(--success);">${i.fechaCierre?formatDate(i.fechaCierre):'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Obs. Cierre</div><div class="detail-val" style="white-space:pre-wrap;">${i.obsCierre||'—'}</div></div>
+    <div class="detail-row"><div class="detail-key">Fotos Cierre</div><div class="detail-val">${fotosCierreHtml}</div></div>
+    `:''}
+    ${i.historia&&i.historia.length?`<div style="margin-top:16px;"><div class="form-label" style="margin-bottom:8px;">HISTORIAL</div>${i.historia.map(h=>`<div class="history-item"><div class="history-date">${new Date(h.fecha).toLocaleString('es-SV')}</div>${h.nota} — Estado: ${h.estado}</div>`).join('')}</div>`:''}
+  `;
+  document.getElementById('detailFooter').innerHTML=`
+    <button class="btn btn-outline" onclick="closeModal('modalDetail')">Cerrar</button>
+    ${can('edit')?`<button class="btn btn-primary" onclick="closeModal('modalDetail');editInspection('${i.id}')">✏️ Editar</button>`:''}
+    ${can('close')&&i.estado!=='CERRADA'?`<button class="btn btn-primary" style="background:linear-gradient(135deg,#00b894,#2ed573);box-shadow:0 2px 12px rgba(46,213,115,0.3);" onclick="cerrarInspection('${i.id}')">✓ Cerrar Inspección</button>`:''}
+  `;
+  document.getElementById('modalDetail').classList.add('open');
+}
+
+function showRacModal(code, inspId) {
+  if(!code) return;
+  const r=RAC_LIST.find(x=>x.code===code.split('/')[0].trim())||{code,desc:'Ver normativa completa'};
+  const info=TIPO_RAC[inspecciones.find(x=>x.id===inspId)?.tipo||''];
+  document.getElementById('detailTitle').textContent=r.code;
+  document.getElementById('detailBody').innerHTML=`
+    <div style="padding:12px 0;">
+      <div style="font-family:var(--mono);font-size:22px;color:var(--accent3);margin-bottom:8px;">${code}</div>
+      <div style="font-size:15px;color:var(--text);margin-bottom:${info?'8px':'20px'};">${r.desc}</div>
+      ${info?`<div style="font-size:12px;color:var(--text2);margin-bottom:16px;padding:10px;background:rgba(0,255,179,0.06);border:1px solid rgba(0,255,179,0.2);border-radius:6px;">${info.racDesc}</div>`:''}
+      <div style="color:var(--text3);font-size:12px;">Normativa aplicable a las inspecciones del Oficial de Aeródromo — Aeropuerto Internacional El Salvador SOARG.</div>
+      <div style="margin-top:16px;"><div class="form-label" style="margin-bottom:8px;">TIPOS DE INSPECCIÓN VINCULADOS</div>
+      ${Object.entries(TIPO_RAC).filter(([,v])=>v.rac.includes(code.split('/')[0].trim())).map(([t])=>`<div style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:13px;">✈ ${t}</div>`).join('')||'<div style="color:var(--text3);font-size:13px;">Sin asignación directa.</div>'}
+      </div>
+    </div>
+  `;
+  document.getElementById('detailFooter').innerHTML=`<button class="btn btn-outline" onclick="closeModal('modalDetail')">Cerrar</button>`;
+  document.getElementById('modalDetail').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════
+//  RAC SUB-TABS
+// ═══════════════════════════════════════════════════════
+function racSubTab(tab) {
+  document.getElementById('racPanelFreq').style.display = tab==='freq' ? 'block' : 'none';
+  document.getElementById('racPanelArt').style.display  = tab==='art'  ? 'block' : 'none';
+  document.getElementById('racSubFreq').classList.toggle('active', tab==='freq');
+  document.getElementById('racSubArt').classList.toggle('active',  tab==='art');
+  if(tab==='art') renderRacList();
+}
+
+// ═══════════════════════════════════════════════════════
+//  RAC LIST
+// ═══════════════════════════════════════════════════════
+function renderRacList() {
+  const q=(document.getElementById('searchRac')?.value||'').toLowerCase();
+  const items=RAC_LIST.filter(r=>!q||r.code.toLowerCase().includes(q)||r.desc.toLowerCase().includes(q));
+  document.getElementById('rac-list').innerHTML=items.map(r=>`
+    <div class="rac-item" onclick="showRacModal('${r.code}','')">
+      <div class="rac-num">${r.code}</div>
+      <div class="rac-desc">${r.desc}</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+//  CHARTS
+// ═══════════════════════════════════════════════════════
+const CD={plugins:{legend:{labels:{color:'#8facc8',font:{family:'IBM Plex Sans',size:11}}}},scales:{x:{ticks:{color:'#8facc8'},grid:{color:'#1f3050'}},y:{ticks:{color:'#8facc8'},grid:{color:'#1f3050'}}}};
+
+function initDashCharts() {
+  const c1=document.getElementById('chartDonut');
+  if(c1) charts.donut=new Chart(c1,{type:'doughnut',data:{labels:['Abiertas','Seguimiento','Sin Novedad','Cerradas'],datasets:[{data:[0,0,0,0],backgroundColor:['#ffb800','#00c2ff','#2ed573','#ff4757'],borderColor:'transparent',borderWidth:2}]},options:{plugins:{legend:{labels:{color:'#8facc8',font:{family:'IBM Plex Sans',size:11}}}},cutout:'65%'}});
+  const c2=document.getElementById('chartBar');
+  if(c2) charts.bar=new Chart(c2,{type:'bar',data:{labels:[],datasets:[{data:[],backgroundColor:'rgba(0,130,255,0.6)',borderColor:'#0080ff',borderWidth:1}]},options:{...CD,plugins:{legend:{display:false}}}});
+  const c3=document.getElementById('chartLine');
+  if(c3) charts.line=new Chart(c3,{type:'line',data:{labels:[],datasets:[{label:'Inspecciones',data:[],borderColor:'#00ffb3',backgroundColor:'rgba(0,255,179,0.08)',tension:0.4,fill:true,pointBackgroundColor:'#00ffb3'}]},options:CD});
+  updateDashCharts();
+}
+
+function updateDashCharts() {
+  if(charts.donut){charts.donut.data.datasets[0].data=[
+    inspecciones.filter(i=>i.estado==='ABIERTA').length,
+    inspecciones.filter(i=>i.estado==='SEGUIMIENTO').length,
+    inspecciones.filter(i=>i.estado==='SIN_NOVEDAD').length,
+    inspecciones.filter(i=>i.estado==='CERRADA').length
+  ];charts.donut.update();}
+  const tc={};inspecciones.forEach(i=>{tc[i.tipo]=(tc[i.tipo]||0)+1;});
+  const s=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(charts.bar){charts.bar.data.labels=s.map(([t])=>t.replace('Inspección de ','').replace('Inspección ',''));charts.bar.data.datasets[0].data=s.map(([,v])=>v);charts.bar.update();}
+  const days=14,labels=[],counts=[];
+  for(let d=days-1;d>=0;d--){const dt=new Date();dt.setDate(dt.getDate()-d);labels.push(dt.toLocaleDateString('es-SV',{month:'short',day:'numeric'}));counts.push(0);}
+  inspecciones.forEach(i=>{if(!i.fecha)return;const dt=new Date(i.fecha+'T00:00:00');const diff=Math.round((new Date()-dt)/86400000);if(diff>=0&&diff<days)counts[days-1-diff]++;});
+  if(charts.line){charts.line.data.labels=labels;charts.line.data.datasets[0].data=counts;charts.line.update();}
+}
+
+function setPeriod(p,btn){currentPeriod=p;document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderCharts();}
+
+const COLORS=['#0080ff','#00c2ff','#00ffb3','#ffb800','#ff4757','#7bed9f','#ff6b81','#a29bfe','#fd79a8','#ffeaa7','#74b9ff','#55efc4','#636e72'];
+function dChart(id){try{const e=Chart.getChart(id);if(e)e.destroy();}catch(err){}}
+
+function renderCharts() {
+  const now=new Date();
+  let sd=new Date();
+  if(currentPeriod==='semanal')sd.setDate(now.getDate()-7);
+  else if(currentPeriod==='mensual')sd.setMonth(now.getMonth()-1);
+  else if(currentPeriod==='semestral')sd.setMonth(now.getMonth()-6);
+  else sd.setFullYear(now.getFullYear()-1);
+
+  // Filter by period; if result is empty fall back to ALL records so chart always shows data
+  let filt=inspecciones.filter(i=>i.fecha&&new Date(i.fecha+'T00:00:00')>=sd);
+  if(filt.length===0) filt=[...inspecciones];
+
+  // ── Por Tipo (horizontal bar) ──
+  const tc={};
+  filt.forEach(i=>{ if(i.tipo) tc[i.tipo]=(tc[i.tipo]||0)+1; });
+  const ts=Object.entries(tc).sort((a,b)=>b[1]-a[1]);
+
+  dChart('chartTipoBar');
+  const c4=document.getElementById('chartTipoBar');
+  if(c4){
+    if(ts.length===0){
+      const ctx=c4.getContext('2d');
+      ctx.clearRect(0,0,c4.width,c4.height);
+      ctx.fillStyle='#4a6580';
+      ctx.font='14px IBM Plex Sans';
+      ctx.textAlign='center';
+      ctx.fillText('Sin inspecciones en este período',c4.width/2,c4.height/2);
+    } else {
+      new Chart(c4,{
+        type:'bar',
+        data:{
+          labels:ts.map(([t])=>t.replace('Inspección de ','').replace('Inspección ','')),
+          datasets:[{
+            data:ts.map(([,v])=>v),
+            backgroundColor:COLORS.slice(0,ts.length),
+            borderWidth:0,
+            borderRadius:4
+          }]
+        },
+        options:{
+          ...CD,
+          plugins:{legend:{display:false}},
+          indexAxis:'y',
+          scales:{
+            x:{...CD.scales.x, beginAtZero:true, ticks:{...CD.scales.x.ticks, stepSize:1}},
+            y:{...CD.scales.y, ticks:{...CD.scales.y.ticks, font:{size:11}}}
+          }
+        }
+      });
+    }
+  }
+
+  // ── Por Categoría (pie) ──
+  const cc={};filt.forEach(i=>{cc[i.categoria||'Sin cat']=(cc[i.categoria||'Sin cat']||0)+1;});
+  dChart('chartCatPie');
+  const c5=document.getElementById('chartCatPie');
+  if(c5&&Object.keys(cc).length)new Chart(c5,{type:'pie',data:{labels:Object.keys(cc),datasets:[{data:Object.values(cc),backgroundColor:COLORS,borderColor:'transparent',borderWidth:2}]},options:{plugins:{legend:{labels:{color:'#8facc8',font:{family:'IBM Plex Sans',size:11}}}}}});
+
+  // ── Tendencia (line) ──
+  const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let bkts=[],lbls=[];
+  if(currentPeriod==='semanal'){
+    lbls=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];bkts=new Array(7).fill(0);
+    filt.forEach(i=>{const d=new Date(i.fecha+'T00:00:00');bkts[d.getDay()]++;});
+  } else {
+    let cur=new Date(sd.getFullYear(),sd.getMonth(),1);
+    while(cur<=now){lbls.push(months[cur.getMonth()]+' '+cur.getFullYear().toString().slice(-2));bkts.push(0);cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);}
+    filt.forEach(i=>{const d=new Date(i.fecha+'T00:00:00');const k=months[d.getMonth()]+' '+d.getFullYear().toString().slice(-2);const idx=lbls.indexOf(k);if(idx>=0)bkts[idx]++;});
+  }
+  dChart('chartTrend');
+  const c6=document.getElementById('chartTrend');
+  if(c6)new Chart(c6,{type:'line',data:{labels:lbls,datasets:[{label:'Inspecciones',data:bkts,borderColor:'#00c2ff',backgroundColor:'rgba(0,194,255,0.07)',tension:0.4,fill:true,pointBackgroundColor:'#00c2ff',pointRadius:4}]},options:CD});
+
+  // ── Estados (bar) ──
+  dChart('chartEstado');
+  const c7=document.getElementById('chartEstado');
+  const es=['ABIERTA','SEGUIMIENTO','SIN_NOVEDAD','CERRADA'];
+  const esLabels=['Abierta','Seguimiento','Sin Novedad','Cerrada'];
+  if(c7)new Chart(c7,{type:'bar',data:{labels:esLabels,datasets:[{data:es.map(e=>filt.filter(i=>i.estado===e).length),backgroundColor:['#ffb800','#00c2ff','#2ed573','#ff4757'],borderWidth:0,borderRadius:4}]},options:{...CD,plugins:{legend:{display:false}}}});
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════════
+function exportCSV() {
+  const headers=['Correlativo','Tipo','Categoría','RAC','Inspector','Fecha','Estado','Prioridad','Frecuencia','Hallazgos','Fecha Cierre','Fotos'];
+  const rows=inspecciones.map(i=>[i.correlativo,i.tipo,i.categoria,i.rac,i.inspector,i.fecha,i.estado,i.prioridad,i.frecuencia,(i.observaciones||'').replace(/\n/g,' '),i.fechaCierre||'',(i.fotos||[]).length+''].map(v=>`"${v||''}"`).join(','));
+  const csv=[headers.join(','),...rows].join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`inspecciones_soarg_${new Date().toISOString().split('T')[0]}.csv`;a.click();
+  showToast('📥 CSV exportado');
+}
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>{t.style.display='none';},3000);}
+
+// ═══════════════════════════════════════════════════════
+//  SAMPLE DATA
+// ═══════════════════════════════════════════════════════
+function loadSampleData() {
+  // No sample data — app starts clean
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+initLogin();
+</script>
+</body>
+</html>
