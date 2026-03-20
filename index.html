@@ -1039,6 +1039,17 @@ const USER_PROFILES = {
     email: 'auditor@siad.sv',
     avatarClass: 'ua-auditor',
     perms: 'Solo lectura: puede ver todas las inspecciones, detalles y gráficas. No puede crear, editar ni eliminar.'
+  },
+  'r704HvgkXXYFT7vaKtaFWs0Yv3x1': {
+    id: 'morfeo',
+    name: 'Morfeo López',
+    shortName: 'Morfeo L.',
+    initials: 'ML',
+    role: 'admin',
+    roleLabel: 'Administrador',
+    email: 'noe.lopez@cepa.gob.sv',
+    avatarClass: 'ua-admin',
+    perms: 'Crear, editar, cerrar inspecciones y subir fotos. No puede eliminar ni gestionar usuarios.'
   }
 };
 
@@ -1971,17 +1982,4 @@ function exportCSV() {
 // ═══════════════════════════════════════════════════════
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>{t.style.display='none';},3000);}
 
-// ═══════════════════════════════════════════════════════
-//  SAMPLE DATA
-// ═══════════════════════════════════════════════════════
-function loadSampleData() {
-  // No sample data — app starts clean
-}
-
-// ═══════════════════════════════════════════════════════
-//  BOOT
-// ═══════════════════════════════════════════════════════
-initLogin();
-</script>
-</body>
-</html>
+// ══════════════
