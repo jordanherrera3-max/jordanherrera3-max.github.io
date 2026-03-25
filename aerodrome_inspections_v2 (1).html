@@ -463,6 +463,7 @@ td{padding:11px 14px;vertical-align:middle;}
     <div class="header-subtitle">Aeropuerto Internacional El Salvador — Oficial de Aeródromo</div>
   </div>
   <div class="header-spacer"></div>
+  <button class="btn btn-primary" id="btnNewHeader" onclick="openNewModal()" style="padding:8px 16px;font-size:13px;">＋ Nueva Inspección</button>
   <div class="header-user">
     <div class="header-avatar" id="hdrAvatar"></div>
     <div>
@@ -543,7 +544,6 @@ td{padding:11px 14px;vertical-align:middle;}
     <div class="section-header">
       <div class="section-title">Dashboard Operacional</div>
       <div class="section-line"></div>
-      <button class="btn btn-primary" id="btnNewDash" onclick="openNewModal()">＋ Nueva Inspección</button>
     </div>
     <div class="charts-grid">
       <div class="chart-card"><div class="chart-title">📊 Estado</div><canvas id="chartDonut" height="200"></canvas></div>
@@ -556,13 +556,13 @@ td{padding:11px 14px;vertical-align:middle;}
 
   <!-- ABIERTAS -->
   <div id="tab-abiertas" class="table-section">
-    <div class="section-header"><div class="section-title">Abiertas</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewAb" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="section-header"><div class="section-title">Abiertas</div><div class="section-line"></div></div>
     <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Prioridad</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-abiertas"></tbody></table></div>
   </div>
 
   <!-- SEGUIMIENTO -->
   <div id="tab-seguimiento" class="table-section">
-    <div class="section-header"><div class="section-title">En Seguimiento</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewSeg" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="section-header"><div class="section-title">En Seguimiento</div><div class="section-line"></div></div>
     <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Observaciones</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-seguimiento"></tbody></table></div>
   </div>
 
@@ -574,7 +574,7 @@ td{padding:11px 14px;vertical-align:middle;}
 
   <!-- TODAS -->
   <div id="tab-todas" class="table-section">
-    <div class="section-header"><div class="section-title">Todas las Inspecciones</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewTodas" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="section-header"><div class="section-title">Todas las Inspecciones</div><div class="section-line"></div></div>
     <div class="toolbar">
       <input type="text" class="search-box" id="searchAll" placeholder="🔍 Buscar correlativo, tipo, inspector..." oninput="renderAll()">
       <select class="filter-select" id="filterCat" onchange="renderAll()"><option value="">Todas las categorías</option></select>
@@ -883,7 +883,7 @@ td{padding:11px 14px;vertical-align:middle;}
 
   <!-- SIN NOVEDAD -->
   <div id="tab-sin_novedad" class="table-section">
-    <div class="section-header"><div class="section-title">Sin Novedad</div><div class="section-line"></div><button class="btn btn-primary" id="btnNewSN" onclick="openNewModal()">＋ Nueva</button></div>
+    <div class="section-header"><div class="section-title">Sin Novedad</div><div class="section-line"></div></div>
     <div class="table-wrap"><table><thead><tr><th>Correlativo</th><th>Tipo Inspección</th><th>Categoría</th><th>Inspector</th><th>Fecha</th><th>Observaciones</th><th>RAC</th><th>Fotos</th><th>Acciones</th></tr></thead><tbody id="tbody-sin_novedad"></tbody></table></div>
   </div>
 
@@ -1104,7 +1104,7 @@ const USER_PROFILES = {
     avatarClass: 'ua-superadmin',
     perms: 'Acceso total: crear, editar, eliminar, ver usuarios, cambiar contraseñas, subir fotos.'
   },
-  'InacRExKKPSXntvvE9uTrkdyro72': {
+  'pGp3i1e6j3Tw5gmLvoViAnkITpp2': {
     id: 'auditor',
     name: 'Auditor de Inspecciones',
     shortName: 'Auditor',
@@ -1193,10 +1193,8 @@ function setupForRole() {
   document.getElementById('hdrRole').innerHTML = `<span class="role-badge role-${r}">${currentUser.roleLabel}</span>`;
   document.getElementById('tabUsuarios').style.display = r === 'superadmin' ? 'flex' : 'none';
   const canCreate = r === 'superadmin' || r === 'admin';
-  ['btnNewDash','btnNewAb','btnNewSeg','btnNewSN','btnNewTodas'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = canCreate ? 'inline-flex' : 'none';
-  });
+  const btnHeader = document.getElementById('btnNewHeader');
+  if (btnHeader) btnHeader.style.display = canCreate ? 'inline-flex' : 'none';
   renderUsersTab();
 }
 
